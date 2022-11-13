@@ -221,6 +221,8 @@ static int process_event(struct flb_kinesis *ctx, struct flush *buf,
     struct kinesis_event *event;
     char *tmp_buf_ptr;
     char *time_key_ptr;
+    char *time_key_format;
+    char *nsec[3];
     struct tm time_stamp;
     struct tm *tmp;
     size_t len;
@@ -295,7 +297,12 @@ static int process_event(struct flb_kinesis *ctx, struct flush *buf,
         time_key_ptr += 3;
         tmp_size = buf->tmp_buf_size - buf->tmp_buf_offset;
         tmp_size -= (time_key_ptr - tmp_buf_ptr);
-        len = strftime(time_key_ptr, tmp_size, ctx->time_key_format, &time_stamp);
+        time_key_format = ctx->time_key_format;
+        if (strcmp(time_key_format+strlen(time_key_format)-2, "%F") == 0) {
+                sprintf(nsec,"%03ld",tms->tm.tv_nsec%1000);
+                strcpy(time_key_format+strlen(time_key_format)-2,nsec);
+        }
+        len = strftime(time_key_ptr, tmp_size, time_key_format, &time_stamp);
         if (len <= 0) {
             /* ran out of space - should not happen because of check above */
             return 1;
